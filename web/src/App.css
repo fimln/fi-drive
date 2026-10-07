@@ -1,0 +1,417 @@
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
+
+/* Drive page shell: wider than the login page since it hosts a 2-column grid */
+.drive-page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 4rem;
+}
+
+/* Login page */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, var(--azure-blue-light) 0%, var(--neutral-bg) 60%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--neutral-surface);
+  border: 1px solid var(--neutral-border);
+  border-radius: 2px;
+  box-shadow: 0 1.6px 3.6px rgba(0, 0, 0, 0.08), 0 0.3px 0.9px rgba(0, 0, 0, 0.06);
+  padding: 2rem;
+  text-align: center;
+}
+
+.login-logo {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.login-card h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+  color: var(--neutral-text);
+}
+
+.login-card p {
+  color: var(--neutral-text-secondary);
+  font-size: 0.9rem;
+  margin: 0 0 1.5rem;
+}
+
+.ms-login-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--azure-blue);
+  color: #ffffff;
+  border: none;
+  border-radius: 2px;
+  padding: 0.65rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.1s ease;
+}
+
+.ms-login-btn:hover {
+  background: var(--azure-blue-dark);
+}
+
+.ms-logo {
+  font-size: 1rem;
+}
+
+.login-note {
+  margin: 0.9rem 0 0;
+  font-size: 0.78rem;
+  color: var(--neutral-text-tertiary);
+}
+
+/* Drive page header */
+.drive-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--neutral-border);
+}
+
+.drive-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.drive-header-icon {
+  font-size: 1.6rem;
+}
+
+.drive-header h1 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0 0 0.1rem;
+  color: var(--neutral-text);
+}
+
+.drive-header p {
+  color: var(--neutral-text-secondary);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid var(--neutral-border);
+  border-radius: 2px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--azure-blue);
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logout-btn:hover {
+  background: var(--azure-blue-light);
+  border-color: var(--azure-blue);
+}
+
+/* Two-column layout: quota + upload on the left, file lists on the right */
+.drive-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.drive-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (max-width: 800px) {
+  .drive-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.upload-card,
+.file-list-card {
+  background: var(--neutral-surface);
+  border: 1px solid var(--neutral-border);
+  border-radius: 2px;
+  box-shadow: 0 1.6px 3.6px rgba(0, 0, 0, 0.06), 0 0.3px 0.9px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--neutral-text);
+}
+
+.field input[type='file'] {
+  font-size: 0.9rem;
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--neutral-text-tertiary);
+}
+
+.field-error {
+  font-size: 0.78rem;
+  color: var(--danger);
+}
+
+/* Quota */
+.quota-card {
+  background: var(--neutral-surface);
+  border: 1px solid var(--neutral-border);
+  border-radius: 2px;
+  box-shadow: 0 1.6px 3.6px rgba(0, 0, 0, 0.06), 0 0.3px 0.9px rgba(0, 0, 0, 0.05);
+  padding: 1.25rem;
+}
+
+.quota-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--neutral-text-secondary);
+  margin-bottom: 0.6rem;
+}
+
+.quota-track {
+  height: 8px;
+  background: var(--azure-blue-light);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.quota-fill {
+  height: 100%;
+  background: var(--azure-blue);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.upload-card button {
+  width: 100%;
+  background: var(--azure-blue);
+  color: #ffffff;
+  border: none;
+  border-radius: 2px;
+  padding: 0.65rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.upload-card button:hover:not(:disabled) {
+  background: var(--azure-blue-dark);
+}
+
+.upload-card button:disabled {
+  background: var(--neutral-text-tertiary);
+  cursor: not-allowed;
+}
+
+.file-list-card h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: var(--neutral-text);
+}
+
+.empty {
+  color: var(--neutral-text-tertiary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.file-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--neutral-border);
+}
+
+.file-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.thumb-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--azure-blue-light);
+  color: var(--azure-blue-dark);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.public-link-controls {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+}
+
+.public-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.public-link-result {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--neutral-text-secondary);
+}
+
+.public-link-result input {
+  width: 100%;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--neutral-border);
+}
+
+.public-link-btn {
+  background: transparent;
+  border: 1px solid var(--azure-blue);
+  border-radius: 2px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--azure-blue);
+  cursor: pointer;
+}
+
+.public-link-btn:disabled {
+  color: var(--neutral-text-tertiary);
+  border-color: var(--neutral-border);
+  cursor: not-allowed;
+}
+
+.public-link-btn:hover:not(:disabled) {
+  background: var(--azure-blue-light);
+}
+
+.file-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--neutral-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-meta {
+  font-size: 0.8rem;
+  color: var(--neutral-text-tertiary);
+}
+
+.download-btn {
+  flex-shrink: 0;
+  display: inline-block;
+  background: transparent;
+  border: 1px solid var(--azure-blue);
+  border-radius: 2px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--azure-blue);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.download-btn:hover {
+  background: var(--azure-blue-light);
+}
+
+@media (max-width: 600px) {
+  .drive-page {
+    padding: 1rem 1rem 3rem;
+  }
+
+  .drive-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .drive-header-title {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .drive-header-title > div {
+    min-width: 0;
+  }
+
+  .drive-header p {
+    overflow-wrap: anywhere;
+  }
+
+}

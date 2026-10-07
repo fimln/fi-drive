@@ -1,0 +1,16 @@
+api/local.settings.json
+api/node_modules/
+cosmos-data/
+azurite-data/
+*.log
+.kilo/
+node_modules/
+web/node_modules/
+web/dist/
+dist/
+tmp/
+.env
+.env.*
+.agents/
+.vscode/
+*.local

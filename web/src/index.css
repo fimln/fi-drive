@@ -1,0 +1,26 @@
+:root {
+  /* Azure / Fluent Design palette */
+  --azure-blue: #0078d4;
+  --azure-blue-dark: #005a9e;
+  --azure-blue-light: #deecf9;
+  --neutral-bg: #faf9f8;
+  --neutral-surface: #ffffff;
+  --neutral-border: #edebe9;
+  --neutral-text: #201f1e;
+  --neutral-text-secondary: #605e5c;
+  --neutral-text-tertiary: #a19f9d;
+  --danger: #d13438;
+
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', Helvetica, Arial, sans-serif;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--neutral-bg);
+  color: var(--neutral-text);
+}
