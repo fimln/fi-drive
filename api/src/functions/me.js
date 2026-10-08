@@ -9,11 +9,10 @@ app.http('me', {
   authLevel: 'anonymous',
   route: 'me',
   handler: async (request) => {
-    const { principal, status } = await requireOwner(request);
+    const { principal, driveEmail: email, status } = await requireOwner(request);
     if (status) return error(status, 'forbidden', 'Akses pemilik diperlukan.');
     await ensureSchema();
 
-    const { email } = principal;
     const container = getContainer('users');
     let { resource: user } = await container.item(email, email).read();
     if (!user) {
@@ -30,7 +29,7 @@ app.http('me', {
       }
     }
     return json(200, {
-      email,
+      email: principal.email,
       usedBytes: user.usedBytes || 0,
       quotaBytes: DRIVE_QUOTA_BYTES,
     });

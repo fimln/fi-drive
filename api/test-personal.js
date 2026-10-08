@@ -6,6 +6,8 @@ let version = 0;
 let conflicts = 0;
 let failUpload = false;
 const owner = 'owner@example.com';
+const secondOwner = 'second@example.com';
+delete process.env.OWNER_EMAILS;
 process.env.OWNER_EMAIL = owner;
 
 function stub(name, exports) {
@@ -96,6 +98,15 @@ async function upload(email = owner, bytes = Buffer.from('%PDF-1.7\nTest'), name
   delete process.env.OWNER_EMAIL;
   assert.equal(isOwner(owner), false);
   process.env.OWNER_EMAIL = owner;
+  process.env.OWNER_EMAILS = ` ${owner.toUpperCase()}, ${secondOwner} `;
+  assert.equal(isOwner(owner), true);
+  assert.equal(isOwner(secondOwner), true);
+  assert.equal((await requireOwner(request(secondOwner))).driveEmail, owner);
+  for (const invalid of ['', `${owner},`, `${owner},not-an-email`, '*@example.com']) {
+    process.env.OWNER_EMAILS = invalid;
+    assert.equal((await requireOwner(request(owner))).status, 403);
+  }
+  process.env.OWNER_EMAILS = `${owner},${secondOwner}`;
   assert.equal(handlers.has('members'), false);
   assert.equal(handlers.has('share-file'), false);
   assert.equal(handlers.has('revoke-share'), false);
@@ -104,7 +115,9 @@ async function upload(email = owner, bytes = Buffer.from('%PDF-1.7\nTest'), name
     assert.equal((await call(name, 'old-member@example.com')).status, 403, name);
     assert.equal((await call(name, null)).status, 401, name);
   }
-  const profiles = await Promise.all([call('me'), call('me')]);
+  const profiles = await Promise.all([call('me'), call('me', secondOwner)]);
+  assert.equal(profiles[1].jsonBody.email, secondOwner);
+  assert.equal(documents.has(`users:${secondOwner}:${secondOwner}`), false);
   assert.ok(profiles.every((r) => r.status === 200));
   assert.equal(profiles[0].jsonBody.quotaBytes, 104857600);
   const userKey = `users:${owner}:${owner}`;
@@ -114,6 +127,7 @@ async function upload(email = owner, bytes = Buffer.from('%PDF-1.7\nTest'), name
   assert.equal(reservations.filter(Boolean).length, 1);
   assert.equal(documents.get(userKey).usedBytes, DRIVE_QUOTA_BYTES);
   assert.equal((await upload()).status, 413);
+  assert.equal((await upload(secondOwner)).status, 413);
   await releaseQuota(owner, DRIVE_QUOTA_BYTES);
   failUpload = true;
   await assert.rejects(upload(), /simulated storage failure/);
@@ -138,13 +152,23 @@ async function upload(email = owner, bytes = Buffer.from('%PDF-1.7\nTest'), name
     assert.equal(documents.get(userKey).usedBytes, 0);
   }
   assert.equal((await upload(owner, Buffer.alloc(10 * 1024 * 1024 + 1))).status, 413);
+  const shared = await upload(secondOwner);
+  assert.equal(shared.status, 201);
+  assert.equal(shared.jsonBody.ownerEmail, owner);
+  assert.deepEqual((await call('list-files')).jsonBody, (await call('list-files', secondOwner)).jsonBody);
+  assert.equal((await call('download-file', owner, { fileId: shared.jsonBody.id })).status, 200);
+  assert.equal((await call('create-public-link', owner, { fileId: shared.jsonBody.id })).status, 201);
+  assert.equal((await call('me', secondOwner)).jsonBody.usedBytes, shared.jsonBody.size);
+  assert.equal((await call('delete-file', owner, { fileId: shared.jsonBody.id })).status, 204);
+  assert.equal((await call('me', secondOwner)).jsonBody.usedBytes, 0);
   const uploaded = await upload();
   assert.equal(uploaded.status, 201);
   const fileId = uploaded.jsonBody.id;
   assert.equal(documents.get(userKey).usedBytes, uploaded.jsonBody.size);
   assert.equal((await call('list-files')).jsonBody.owned.length, 1);
   assert.equal((await call('download-file', owner, { fileId })).status, 200);
-  const created = await call('create-public-link', owner, { fileId });
+  assert.equal((await call('download-file', secondOwner, { fileId })).status, 200);
+  const created = await call('create-public-link', secondOwner, { fileId });
   assert.equal(created.status, 201);
   assert.equal(created.jsonBody.maxDownloads, 50);
   assert.equal(created.jsonBody.remainingDownloads, 50);
@@ -166,9 +190,13 @@ async function upload(email = owner, bytes = Buffer.from('%PDF-1.7\nTest'), name
   assert.equal((await call('download-public-link', null, { token })).status, 200);
   assert.equal((await call('create-public-link', owner, { fileId })).jsonBody.remainingDownloads, 46);
   assert.equal((await call('download-public-link', null, { token: 'invalid' })).status, 404);
-  assert.equal((await call('delete-file', owner, { fileId })).status, 204);
+  process.env.OWNER_EMAILS = secondOwner;
+  assert.equal((await call('list-files', owner)).status, 403);
+  assert.equal((await call('list-files', secondOwner)).jsonBody.owned.length, 1);
+  assert.equal((await call('delete-file', secondOwner, { fileId })).status, 204);
+  process.env.OWNER_EMAILS = `${owner},${secondOwner}`;
   assert.equal(documents.get(userKey).usedBytes, 0);
   assert.equal((await call('download-public-link', null, { token })).status, 404);
   assert.equal((await call('list-files')).jsonBody.owned.length, 0);
-  console.log('Personal drive: owner-only access, 100 MiB quota, unrestricted file types, upload/delete, 50 public downloads, ETag races, and legacy links passed.');
+  console.log('Personal drive: multiple owners, shared files and quota, 100 MiB quota, unrestricted file types, upload/delete, 50 public downloads, ETag races, and legacy links passed.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

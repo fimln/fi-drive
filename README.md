@@ -4,17 +4,17 @@
 
 Kode proyek ini menggunakan [MIT License](LICENSE), dengan atribusi kepada kontributor fi-drive, termasuk kontributor proyek kelompok asal. Dependency pihak ketiga tetap menggunakan lisensinya masing-masing; lisensi MIT proyek ini tidak menggantikan lisensi atau pemberitahuan hak cipta dependency.
 
-Drive pribadi untuk satu pemilik. Frontend React berjalan di Azure Static Web Apps; API terkelola menyimpan metadata di Azure Cosmos DB dan isi berkas di Azure Blob Storage privat.
+Drive pribadi dengan beberapa akun owner yang mengakses drive yang sama. Frontend React berjalan di Azure Static Web Apps; API terkelola menyimpan metadata di Azure Cosmos DB dan isi berkas di Azure Blob Storage privat.
 
 ## Fitur
 
 - Login melalui Microsoft Entra ID bawaan Static Web Apps.
-- Hanya akun Microsoft dengan email `OWNER_EMAIL` yang dapat memakai API privat. Akun lain ditolak (403).
+- Hanya akun Microsoft dengan email dalam `OWNER_EMAILS` yang dapat memakai API privat. Akun lain ditolak (403).
 - Kuota total drive 100 MiB (104.857.600 byte), tanpa pembagian kuota per pengguna. Semua tipe berkas diterima, termasuk Markdown, dengan batas 10 MiB per berkas.
 - Upload, download, hapus berkas, dan public link dengan desain utama yang sama, tanpa Manage Members atau berbagi antaranggota.
 - Public link dibatasi 50 unduhan per berkas, ditegakkan API dengan ETag. Link yang dibuat sebelum batas ini berlaku disesuaikan saat dipakai, dengan unduhan yang sudah terpakai tetap dihitung.
 
-Blob tetap privat; unduhan publik melewati API tanpa login. Identitas privat diverifikasi melalui Static Web Apps. Tetapkan satu email pemilik sebelum menjalankan aplikasi; daftar email dipisahkan koma akan ditolak.
+Blob tetap privat; unduhan publik melewati API tanpa login. Identitas privat diverifikasi melalui Static Web Apps. Tetapkan `OWNER_EMAILS` sebagai daftar email owner dipisahkan koma. Semua owner bisa melihat, upload, download, menghapus, dan membuat public link pada drive yang sama, dengan kuota total 100 MiB. `OWNER_EMAIL` tetap menjadi identitas partisi penyimpanan; jangan mengubahnya untuk menambah atau menghapus akses akun. Jika `OWNER_EMAILS` belum diatur, akses memakai `OWNER_EMAIL` untuk kompatibilitas.
 
 ## Menjalankan secara lokal
 
@@ -38,7 +38,7 @@ cd ..
 npx @azure/static-web-apps-cli start ./web/dist --api-port 7071 --port 4280
 ```
 
-Buka `http://localhost:4280/.auth/login/aad` dan login sebagai `admin@example.com`, sesuai contoh `OWNER_EMAIL` di `api/local.settings.json`. Ganti `OWNER_EMAIL` dengan email Microsoft Anda untuk penggunaan pribadi. Berkas pengaturan lokal dan nilai rahasia produksi tidak boleh di-commit. Kunci di file contoh adalah kredensial emulator lokal yang dipublikasikan Azure, bukan kunci Azure produksi.
+Buka `http://localhost:4280/.auth/login/aad` dan login sebagai `admin@example.com`, sesuai contoh `OWNER_EMAIL` di `api/local.settings.json`. Atur `OWNER_EMAILS` dengan akun Microsoft yang diberi akses; `OWNER_EMAIL` menjadi identitas penyimpanan drive. Berkas pengaturan lokal dan nilai rahasia produksi tidak boleh di-commit. Kunci di file contoh adalah kredensial emulator lokal yang dipublikasikan Azure, bukan kunci Azure produksi.
 
 ## Pemeriksaan
 
@@ -70,12 +70,13 @@ Atur application settings Static Web App berikut (isi nilainya di Azure, bukan d
 | `COSMOS_DATABASE` | Nama database, default `fidrive` |
 | `STORAGE_CONNECTION` | Connection string Storage account |
 | `FILES_CONTAINER` | Nama container Blob, default `files` |
-| `OWNER_EMAIL` | Satu email Microsoft pemilik drive |
+| `OWNER_EMAIL` | Identitas penyimpanan drive, pertahankan email owner lama agar berkas dan kuota tetap tersedia |
+| `OWNER_EMAILS` | Email akun Microsoft yang diberi akses, dipisahkan koma |
 
 Contoh dengan Azure CLI:
 
 ```powershell
-az staticwebapp appsettings set --name <your-swa-name> --resource-group <your-resource-group> --setting-names COSMOS_CONNECTION="<cosmos-connection-string>" COSMOS_DATABASE=fidrive STORAGE_CONNECTION="<storage-connection-string>" FILES_CONTAINER=files OWNER_EMAIL=you@example.com
+az staticwebapp appsettings set --name <your-swa-name> --resource-group <your-resource-group> --setting-names COSMOS_CONNECTION="<cosmos-connection-string>" COSMOS_DATABASE=fidrive STORAGE_CONNECTION="<storage-connection-string>" FILES_CONTAINER=files OWNER_EMAIL=you@example.com OWNER_EMAILS=you@example.com,second@example.com
 ```
 
 Cosmos memakai throughput bersama 400 RU/s untuk container `users`, `files`, dan `publicLinks`. Blob ditagih sesuai pemakaian, sehingga total biaya tidak dijamin nol. Jangan simpan connection string, token, email pengguna, nama resource produksi, atau hasil ekspor data produksi di Git.
@@ -99,5 +100,5 @@ Satu secret GitHub wajib ada di repo: `AZURE_STATIC_WEB_APPS_API_TOKEN`, berisi 
 ## Batasan
 
 - Tidak ada pratinjau atau thumbnail otomatis dan pemindaian malware.
-- Data tidak dimigrasikan otomatis. Untuk memakai database Cosmos yang sudah ada, atur `COSMOS_DATABASE` ke nama database tersebut dan `OWNER_EMAIL` ke email pemilik berkas di dalamnya; berkas milik email lain tidak akan terlihat.
+- Data tidak dimigrasikan otomatis. Untuk memakai database Cosmos yang sudah ada, atur `COSMOS_DATABASE` ke nama database tersebut dan pertahankan `OWNER_EMAIL` sesuai partisi berkas yang sudah ada. Akun dalam `OWNER_EMAILS` semuanya mengakses partisi dan kuota tersebut.
 - Paket Static Web Apps Free tidak memiliki SLA. Biaya Cosmos DB dan Blob Storage bergantung pada pemakaian.

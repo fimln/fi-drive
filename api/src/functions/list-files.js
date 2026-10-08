@@ -23,11 +23,9 @@ app.http('list-files', {
   authLevel: 'anonymous',
   route: 'files',
   handler: async (request) => {
-    const { principal, status } = await requireOwner(request);
+    const { driveEmail: email, status } = await requireOwner(request);
     if (status) return error(status, 'forbidden', 'Akses pemilik diperlukan.');
     await ensureSchema();
-
-    const { email } = principal;
 
     const { resources } = await getContainer('files').items
       .query({

@@ -10,11 +10,10 @@ app.http('delete-file', {
   authLevel: 'anonymous',
   route: 'files/{fileId}',
   handler: async (request) => {
-    const { principal, status } = await requireOwner(request);
+    const { driveEmail: email, status } = await requireOwner(request);
     if (status) return error(status, 'forbidden', 'Akses pemilik diperlukan.');
     await ensureSchema();
 
-    const { email } = principal;
     const fileId = request.params.fileId;
 
     // Hanya pemilik. Partisi files adalah /ownerEmail, jadi ini point read.

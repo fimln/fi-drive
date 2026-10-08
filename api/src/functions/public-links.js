@@ -47,14 +47,14 @@ app.http('create-public-link', {
   authLevel: 'anonymous',
   route: 'files/{fileId}/public-link',
   handler: async (request) => {
-    const { principal, status } = await requireOwner(request);
+    const { driveEmail, status } = await requireOwner(request);
     if (status) return error(status, 'forbidden', 'Akses pemilik diperlukan.');
     await ensureSchema();
 
     const fileId = request.params.fileId;
     const files = getContainer('files');
     const links = getContainer('publicLinks');
-    const { resource: file } = await files.item(fileId, principal.email).read();
+    const { resource: file } = await files.item(fileId, driveEmail).read();
     if (!file) {
       return error(403, 'forbidden', 'Anda bukan pemilik berkas ini.');
     }
@@ -71,21 +71,21 @@ app.http('create-public-link', {
       id: token,
       token,
       fileId,
-      ownerEmail: principal.email,
+      ownerEmail: driveEmail,
       remainingDownloads: MAX_DOWNLOADS,
       maxDownloads: MAX_DOWNLOADS,
     };
     await links.items.create(link);
 
     try {
-      await files.item(fileId, principal.email).replace(
+      await files.item(fileId, driveEmail).replace(
         { ...file, publicToken: token },
         { accessCondition: { type: 'IfMatch', condition: file._etag } }
       );
     } catch (replaceError) {
       await links.item(token, token).delete();
       if (replaceError.code === 412 || replaceError.statusCode === 412) {
-        const { resource: updated } = await files.item(fileId, principal.email).read();
+        const { resource: updated } = await files.item(fileId, driveEmail).read();
         if (updated && updated.publicToken) {
           const winner = await readLink(links.item(updated.publicToken, updated.publicToken));
           if (winner) return linkResponse(winner);

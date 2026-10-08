@@ -7,6 +7,7 @@
     "COSMOS_DATABASE": "fidrive",
     "STORAGE_CONNECTION": "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;",
     "FILES_CONTAINER": "files",
-    "OWNER_EMAIL": "admin@example.com"
+    "OWNER_EMAIL": "admin@example.com",
+    "OWNER_EMAILS": "admin@example.com,second@example.com"
   }
 }

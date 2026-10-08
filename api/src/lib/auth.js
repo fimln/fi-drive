@@ -1,5 +1,5 @@
 function isEmail(value) {
-  return typeof value === 'string' && /^[^\s@*]+@[^\s@*]+\.[^\s@*]+$/.test(value);
+  return typeof value === 'string' && /^[^\s@*,]+@[^\s@*,]+\.[^\s@*,]+$/.test(value);
 }
 
 /**
@@ -43,15 +43,19 @@ function getPrincipal(request) {
 }
 
 function isOwner(email) {
-  const owner = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
-  return isEmail(owner) && owner === email;
+  const owners = (process.env.OWNER_EMAILS ?? process.env.OWNER_EMAIL ?? '')
+    .split(',').map((value) => value.trim().toLowerCase());
+  return isEmail((process.env.OWNER_EMAIL || '').trim().toLowerCase())
+    && owners.every(isEmail) && owners.includes(email);
 }
 
 async function requireOwner(request) {
   const principal = getPrincipal(request);
   if (!principal) return { status: 401 };
   if (!isOwner(principal.email)) return { status: 403 };
-  return { principal };
+  // Keep the existing storage partition independent of the account signing in.
+  const driveEmail = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
+  return { principal, driveEmail };
 }
 
 module.exports = { getPrincipal, isOwner, isEmail, requireOwner };

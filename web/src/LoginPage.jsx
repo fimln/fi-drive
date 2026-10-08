@@ -19,7 +19,7 @@ function LoginPage() {
           Sign in with Microsoft
         </a>
         <p className="login-note">
-          Only the owner can access this personal drive.
+          Only authorized owners can access this personal drive.
         </p>
       </div>
     </div>

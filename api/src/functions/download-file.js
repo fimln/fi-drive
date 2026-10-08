@@ -9,11 +9,10 @@ app.http('download-file', {
   authLevel: 'anonymous',
   route: 'files/{fileId}/download',
   handler: async (request) => {
-    const { principal, status } = await requireOwner(request);
+    const { driveEmail: email, status } = await requireOwner(request);
     if (status) return error(status, 'forbidden', 'Akses pemilik diperlukan.');
     await ensureSchema();
 
-    const { email } = principal;
     const fileId = request.params.fileId;
 
     const { resource: file } = await getContainer('files').item(fileId, email).read();
