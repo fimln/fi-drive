@@ -1,5 +1,9 @@
 # fi-drive
 
+## Lisensi
+
+Kode proyek ini menggunakan [MIT License](LICENSE), dengan atribusi kepada kontributor fi-drive, termasuk kontributor proyek kelompok asal. Dependency pihak ketiga tetap menggunakan lisensinya masing-masing; lisensi MIT proyek ini tidak menggantikan lisensi atau pemberitahuan hak cipta dependency.
+
 Drive pribadi untuk satu pemilik. Frontend React berjalan di Azure Static Web Apps; API terkelola menyimpan metadata di Azure Cosmos DB dan isi berkas di Azure Blob Storage privat.
 
 ## Fitur
