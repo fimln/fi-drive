@@ -83,5 +83,5 @@ export function downloadUrl(fileId) {
   return `/api/files/${fileId}/download`
 }
 
-export const LOGIN_URL = '/.auth/login/aad?post_login_redirect_uri=/'
-export const LOGOUT_URL = '/.auth/logout?post_logout_redirect_uri=/'
+export const LOGIN_URL = `/.auth/login/aad?post_login_redirect_uri=${import.meta.env.BASE_URL}`
+export const LOGOUT_URL = `/.auth/logout?post_logout_redirect_uri=${import.meta.env.BASE_URL}`

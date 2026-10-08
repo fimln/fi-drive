@@ -80,6 +80,16 @@ az staticwebapp appsettings set --name <your-swa-name> --resource-group <your-re
 
 Cosmos memakai throughput bersama 400 RU/s untuk container `users`, `files`, dan `publicLinks`. Blob ditagih sesuai pemakaian, sehingga total biaya tidak dijamin nol. Jangan simpan connection string, token, email pengguna, nama resource produksi, atau hasil ekspor data produksi di Git.
 
+## Domain
+
+URL produksi drive: `https://drive.alfi.ai.id/`. Frontend memakai base `/`; login/logout dan public link memakai hostname yang sama.
+
+Record Cloudflare CNAME `drive` mengarah langsung ke hostname Azure Static Web Apps dengan proxy dinonaktifkan (DNS only). Daftarkan subdomain melalui `az staticwebapp hostname set --validation-method cname-delegation`; Azure memvalidasi DNS dan menyediakan sertifikat HTTPS.
+
+Cloudflare Worker [`scripts/drive-proxy.mjs`](scripts/drive-proxy.mjs) mengalihkan URL lama `/drive`, `/drive/*`, `/api/*`, dan `/.auth/*` pada domain utama ke subdomain baru dengan status 308, mempertahankan path dan query public link. Halaman utama tetap memakai origin website sebelumnya. Worker tidak lagi membutuhkan binding `AZURE_ORIGIN` atau route validasi sertifikat.
+
+Verifikasi redirect lokal: `node scripts/test-drive-proxy.mjs`. Sesudah deploy, cek halaman, aset, API anonim, serta hostname callback dan domain cookie login. Login penuh tetap perlu dilakukan memakai akun pemilik.
+
 ## CI/CD
 
 Workflow `.github/workflows/azure-static-web-apps.yml` memakai `Azure/static-web-apps-deploy@v1`. Setiap push ke `main` membangun `web` (hasil `dist`) dan API `api`, lalu men-deploy ke Static Web App produksi. Pull request ke `main` dibangun dan di-deploy ke environment pratinjau, yang ditutup saat pull request ditutup. Workflow juga bisa dijalankan manual lewat `workflow_dispatch`.

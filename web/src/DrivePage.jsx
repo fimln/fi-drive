@@ -121,7 +121,7 @@ function PublicLinkControls({ file }) {
     setError('')
     try {
       const link = await createPublicLink(file.id)
-      const url = new URL(link.path, window.location.origin).href
+      const url = new URL(`${import.meta.env.BASE_URL}${link.path.slice(1)}`, window.location.origin).href
       setPublicLink(url)
       setPublicRemaining(link.remainingDownloads)
       setCopied(false)
