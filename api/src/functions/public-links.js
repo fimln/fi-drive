@@ -36,7 +36,7 @@ async function readLink(item) {
 
 function linkResponse(link, status = 200) {
   return json(status, {
-    path: `/?public=${link.token}`,
+    path: `/s/${link.token}`,
     remainingDownloads: link.remainingDownloads,
     maxDownloads: MAX_DOWNLOADS,
   });

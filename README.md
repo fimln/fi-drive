@@ -44,6 +44,7 @@ Buka `http://localhost:4280/.auth/login/aad` dan login sebagai `admin@example.co
 
 ```powershell
 node api/test-personal.js
+node web/test-public-link.mjs
 cd web
 npm run lint
 npm run build
@@ -83,7 +84,7 @@ Cosmos memakai throughput bersama 400 RU/s untuk container `users`, `files`, dan
 
 ## Domain
 
-URL produksi drive: `https://drive.alfi.ai.id/`. Frontend memakai base `/`; login/logout dan public link memakai hostname yang sama.
+URL produksi drive: `https://drive.alfi.ai.id/`. Frontend memakai base `/`; login/logout dan public link memakai hostname yang sama. Public link baru menggunakan `/s/<token>`; format lama `/?public=<token>` tetap didukung. Membuka halaman public link tidak menghabiskan jatah unduhan, unduhan dimulai setelah tombol Download diklik.
 
 Record Cloudflare CNAME `drive` mengarah langsung ke hostname Azure Static Web Apps dengan proxy dinonaktifkan (DNS only). Daftarkan subdomain melalui `az staticwebapp hostname set --validation-method cname-delegation`; Azure memvalidasi DNS dan menyediakan sertifikat HTTPS.
 

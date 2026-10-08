@@ -64,8 +64,9 @@ function PersonalApp() {
 
 function App() {
   const params = new URLSearchParams(window.location.search)
-  if (params.has('public')) {
-    const token = params.get('public')
+  const isPublicPath = window.location.pathname.startsWith('/s/')
+  if (isPublicPath || params.has('public')) {
+    const token = isPublicPath ? window.location.pathname.slice(3) : params.get('public')
     return (
       <div className="login-page">
         <div className="login-card">

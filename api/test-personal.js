@@ -172,7 +172,8 @@ async function upload(email = owner, bytes = Buffer.from('%PDF-1.7\nTest'), name
   assert.equal(created.status, 201);
   assert.equal(created.jsonBody.maxDownloads, 50);
   assert.equal(created.jsonBody.remainingDownloads, 50);
-  const token = created.jsonBody.path.split('=')[1];
+  assert.match(created.jsonBody.path, /^\/s\/[A-Za-z0-9_-]{22}$/);
+  const token = created.jsonBody.path.slice(3);
   assert.equal((await call('create-public-link', owner, { fileId })).jsonBody.path, created.jsonBody.path);
   for (let i = 0; i < 45; i++) assert.equal((await call('download-public-link', null, { token })).status, 200);
   const downloads = await Promise.all(Array.from({ length: 6 }, () => call('download-public-link', null, { token })));
