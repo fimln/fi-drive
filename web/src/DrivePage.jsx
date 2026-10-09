@@ -31,7 +31,7 @@ function UploadForm({ remaining, onUploaded }) {
     }
 
     if (picked.size > MAX_FILE_SIZE) {
-      setError('File exceeds the 10 MB per-file limit.')
+      setError('File exceeds the 100 MB per-file limit.')
       setFile(null)
       return
     }
@@ -74,7 +74,7 @@ function UploadForm({ remaining, onUploaded }) {
           required
         />
         <span className="hint">
-          Any file type. Max 10 MB per file, {formatSize(Math.max(remaining, 0))}{' '}
+          Any file type. Max 100 MB per file, {formatSize(Math.max(remaining, 0))}{' '}
           quota remaining.
         </span>
         {error && <span className="field-error">{error}</span>}

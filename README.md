@@ -7,11 +7,13 @@ Drive pribadi dengan beberapa akun owner yang mengakses drive yang sama. Seluruh
 ## Fitur
 - Login OTP email melalui Cloudflare Access.
 - Hanya akun dengan email dalam `OWNER_EMAILS` yang dapat memakai API privat. Akun lain ditolak (403).
-- Kuota total drive 8 GiB (8.589.934.592 byte), tanpa pembagian kuota per pengguna. Semua tipe berkas diterima, termasuk Markdown, dengan batas 10 MiB per berkas.
+- Kuota total drive 8 GiB (8.589.934.592 byte), tanpa pembagian kuota per pengguna. Semua tipe berkas diterima, termasuk Markdown, dengan batas 100 MB (100.000.000 byte) per berkas.
 - Upload, download, hapus berkas, dan public link, tanpa Manage Members atau berbagi antaranggota.
 - Public link dibatasi 100 unduhan per berkas, ditegakkan dengan `UPDATE` atomik di D1. Link lama (10 atau 50 unduhan) disesuaikan saat dipakai, dengan unduhan yang sudah terpakai tetap dihitung.
 
 Objek R2 tetap privat; unduhan publik melewati Worker tanpa login. `OWNER_EMAILS` berisi daftar email owner dipisahkan koma. `OWNER_EMAIL` adalah identitas partisi penyimpanan (kolom `owner_email` dan baris `users`); jangan mengubahnya untuk menambah atau menghapus akses akun. Jika `OWNER_EMAILS` belum diatur, akses memakai `OWNER_EMAIL`.
+
+Upload frontend memakai `POST /api/files` dengan body berkas mentah, `Content-Type: application/octet-stream`, nama berkas URL-encoded pada `X-File-Name`, dan `Content-Length` yang diisi browser. Worker meneruskan stream ke R2. Klien multipart lama tetap didukung sampai 10 MiB.
 
 ## Arsitektur
 | Bagian | Lokasi | Catatan |
@@ -72,5 +74,5 @@ Cloudflare Worker [`scripts/drive-proxy.mjs`](scripts/drive-proxy.mjs) mengalihk
 
 ## Batasan
 - Tidak ada pratinjau atau thumbnail otomatis dan pemindaian malware.
-- Workers Free membatasi body request 100 MB; aplikasi memakai batas 10 MiB per berkas.
+- Workers Free membatasi body request 100 MB; aplikasi memakai batas 100 MB (100.000.000 byte) per berkas.
 - Bila Access belum dikonfigurasi atau `ACCESS_AUD` salah, API privat membalas 401 dan frontend terus mengarahkan ke `/`.

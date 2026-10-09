@@ -60,11 +60,13 @@ export function listFiles() {
   return request('/api/files')
 }
 
-// POST /api/files — multipart, field name must be "file".
+// Send the file body directly so multipart overhead does not consume the upload limit.
 export function uploadFile(file) {
-  const form = new FormData()
-  form.append('file', file)
-  return request('/api/files', { method: 'POST', body: form })
+  return request('/api/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) },
+    body: file,
+  })
 }
 
 // DELETE /api/files/{fileId} — owner only.

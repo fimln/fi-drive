@@ -127,17 +127,44 @@ async function listFiles(env, { driveEmail }) {
 }
 
 async function uploadFile(request, env, { driveEmail: email }) {
-  let form;
-  try {
-    form = await request.formData();
-  } catch {
-    return error(400, 'invalid_body', 'Body harus berupa multipart/form-data dengan field "file".');
+  let uploaded;
+  let size;
+  let name;
+  const contentLength = request.headers.get('Content-Length');
+  if (contentLength === null) return error(411, 'length_required', 'Content-Length diperlukan.');
+  if (!/^\d+$/.test(contentLength)) return error(400, 'invalid_size', 'Ukuran berkas tidak valid.');
+  size = Number(contentLength);
+  if (!Number.isSafeInteger(size) || size > MAX_FILE_BYTES) {
+    return error(413, 'file_too_large', `Ukuran berkas melebihi batas ${MAX_FILE_BYTES} byte.`);
   }
-  const uploaded = form.get('file');
-  if (!uploaded || typeof uploaded.arrayBuffer !== 'function') {
-    return error(400, 'missing_file', 'Field "file" tidak ada di form-data.');
+  if (request.headers.get('Content-Type') === 'application/octet-stream') {
+    uploaded = request.body;
+    try {
+      name = decodeURIComponent(request.headers.get('X-File-Name') || '');
+    } catch {
+      return error(400, 'invalid_name', 'Nama berkas tidak valid.');
+    }
+  } else {
+    // shortcut: legacy multipart stays at 10 MiB; use raw bodies for larger files.
+    if (size > 10 * 1024 * 1024 + 65536) {
+      return error(413, 'file_too_large', 'Gunakan application/octet-stream untuk berkas besar.');
+    }
+    let form;
+    try {
+      form = await request.formData();
+    } catch {
+      return error(400, 'invalid_body', 'Body harus berupa berkas atau multipart/form-data.');
+    }
+    uploaded = form.get('file');
+    if (!uploaded || typeof uploaded.arrayBuffer !== 'function') {
+      return error(400, 'missing_file', 'Field "file" tidak ada di form-data.');
+    }
+    size = uploaded.size;
+    name = uploaded.name;
+    if (size > 10 * 1024 * 1024) {
+      return error(413, 'file_too_large', 'Gunakan application/octet-stream untuk berkas besar.');
+    }
   }
-  const size = uploaded.size;
   if (size === 0) {
     return error(400, 'empty_file', 'Berkas kosong.');
   }
@@ -156,9 +183,9 @@ async function uploadFile(request, env, { driveEmail: email }) {
   }
   const id = crypto.randomUUID();
   const blobName = id;
-  const name = typeof uploaded.name === 'string' && uploaded.name ? uploaded.name : blobName;
+  name = typeof name === 'string' && name ? name : blobName;
   try {
-    // Blob/File langsung: R2 membutuhkan panjang yang diketahui.
+    // Incoming request streams and Blob/File expose their length to R2.
     await env.FILES.put(blobName, uploaded, {
       httpMetadata: { contentType },
     });

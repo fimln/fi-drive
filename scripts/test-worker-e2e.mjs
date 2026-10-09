@@ -1,14 +1,13 @@
 // End-to-end check against a running `wrangler dev` (local D1 + R2) with
 // DEV_AUTH_USER set in .dev.vars. Usage: node scripts/test-worker-e2e.mjs [baseUrl]
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 
 const base = process.argv[2] || 'http://127.0.0.1:8787'
 const api = (path, init) => fetch(base + path, { redirect: 'manual', ...init })
 
 function upload(name, bytes) {
-  const form = new FormData()
-  form.append('file', new Blob([bytes]), name)
-  return api('/api/files', { method: 'POST', body: form })
+  return api('/api/files', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(name) }, body: new Blob([bytes]) })
 }
 
 const me = await api('/api/me')
@@ -22,9 +21,38 @@ const empty = await upload('empty.txt', new Uint8Array(0))
 assert.equal(empty.status, 400)
 assert.equal((await empty.json()).error, 'empty_file')
 
-const tooLarge = await upload('big.bin', new Uint8Array(10 * 1024 * 1024 + 1))
+const tooLarge = await upload('big.bin', new Uint8Array(100_000_001))
 assert.equal(tooLarge.status, 413)
 assert.equal((await tooLarge.json()).error, 'file_too_large')
+
+const invalidName = await api('/api/files', {
+  method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': '%ZZ' }, body: 'test',
+})
+assert.equal(invalidName.status, 400)
+
+const largestBytes = new Uint8Array(100_000_000)
+largestBytes[0] = 1
+largestBytes[largestBytes.length - 1] = 2
+const largest = await upload('100MB.bin', largestBytes)
+assert.equal(largest.status, 201)
+const largestFile = await largest.json()
+assert.equal(largestFile.size, largestBytes.length)
+assert.equal((await (await api('/api/me')).json()).usedBytes, profile.usedBytes + largestBytes.length)
+const largestDownload = await api(`/api/files/${largestFile.id}/download`)
+assert.equal(largestDownload.status, 200)
+const hash = createHash('sha256')
+for await (const chunk of largestDownload.body) hash.update(chunk)
+assert.equal(hash.digest('hex'), createHash('sha256').update(largestBytes).digest('hex'))
+assert.equal((await api(`/api/files/${largestFile.id}`, { method: 'DELETE' })).status, 204)
+assert.equal((await (await api('/api/me')).json()).usedBytes, profile.usedBytes)
+console.log('100 MB boundary: upload, streaming download hash, delete and quota release passed')
+
+const legacyForm = new FormData()
+legacyForm.append('file', new Blob(['legacy']), 'legacy.txt')
+const legacy = await api('/api/files', { method: 'POST', body: legacyForm })
+assert.equal(legacy.status, 201)
+const legacyFile = await legacy.json()
+assert.equal((await api(`/api/files/${legacyFile.id}`, { method: 'DELETE' })).status, 204)
 
 const content = new TextEncoder().encode('# halo "fi-drive"\n')
 const created = await upload('catatan uji.md', content)
