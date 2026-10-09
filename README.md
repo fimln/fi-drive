@@ -1,7 +1,4 @@
 # fi-drive
-## Lisensi
-Kode proyek ini menggunakan [MIT License](LICENSE), dengan atribusi kepada kontributor fi-drive, termasuk kontributor proyek kelompok asal. Dependency pihak ketiga tetap menggunakan lisensinya masing-masing; lisensi MIT proyek ini tidak menggantikan lisensi atau pemberitahuan hak cipta dependency.
-
 Drive pribadi dengan beberapa akun owner yang mengakses drive yang sama. Seluruh aplikasi berjalan di Cloudflare: satu Worker melayani frontend React (Workers Static Assets) dan API `/api/*`, metadata disimpan di D1, isi berkas di bucket R2 privat, dan login dijaga Cloudflare Access dengan OTP email.
 
 ## Fitur
