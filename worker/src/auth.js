@@ -1,6 +1,6 @@
 // Satu-satunya sumber identitas di seluruh API.
 //
-// Produksi: Cloudflare Access memverifikasi login (IdP Microsoft Entra ID) lalu
+// Produksi: Cloudflare Access memverifikasi login (OTP email) lalu
 // meneruskan JWT di header `Cf-Access-Jwt-Assertion` (cadangan: cookie
 // `CF_Authorization`). Worker tetap memverifikasi tanda tangan, `aud`, `iss`,
 // dan masa berlaku JWT, sehingga request yang melewati Access (mis. langsung ke

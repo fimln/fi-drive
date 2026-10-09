@@ -3,7 +3,7 @@
 import { requireOwner } from './auth.js';
 import { DRIVE_QUOTA_BYTES, MAX_FILE_BYTES } from './validation.js';
 
-const MAX_DOWNLOADS = 50;
+const MAX_DOWNLOADS = 100;
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 const NO_STORE = { 'Cache-Control': 'no-store' };
 
@@ -58,7 +58,7 @@ function getFile(env, id, ownerEmail) {
     .bind(id, ownerEmail).first();
 }
 
-// Link lama punya 10 unduhan. Upgrade atomik ke 50 dengan tetap menghitung
+// Link lama punya 10 atau 50 unduhan. Upgrade atomik ke 100 dengan tetap menghitung
 // unduhan yang sudah terpakai.
 async function readLink(env, token) {
   await env.DB.prepare(
@@ -240,7 +240,7 @@ async function downloadPublic(env, token) {
   if (!TOKEN_PATTERN.test(token)) return publicError(404, 'Tautan tidak ditemukan.');
   const link = await readLink(env, token);
   if (!link) return publicError(404, 'Tautan tidak ditemukan.');
-  if (link.remaining_downloads <= 0) return publicError(410, 'Batas 50 unduhan tercapai.');
+  if (link.remaining_downloads <= 0) return publicError(410, 'Batas 100 unduhan tercapai.');
   const file = await getFile(env, link.file_id, link.owner_email);
   if (!file || file.public_token !== token) return publicError(404, 'Berkas tidak tersedia.');
   const object = await env.FILES.get(file.blob_name);
@@ -251,7 +251,7 @@ async function downloadPublic(env, token) {
   ).bind(token).first();
   if (!decremented) {
     await object.body.cancel();
-    return publicError(410, 'Batas 50 unduhan tercapai.');
+    return publicError(410, 'Batas 100 unduhan tercapai.');
   }
   return downloadResponse(file, object);
 }

@@ -148,7 +148,7 @@ function PublicLinkControls({ file }) {
       {publicLink && (
         <div className="public-link-result">
           <input aria-label="Public link" readOnly value={publicLink} onFocus={(e) => e.target.select()} />
-          <span>{copied ? 'Link copied. ' : ''}{publicRemaining} of 50 downloads left.</span>
+          <span>{copied ? 'Link copied. ' : ''}{publicRemaining} of 100 downloads left.</span>
         </div>
       )}
       {error && <span className="field-error">{error}</span>}

@@ -1,5 +1,5 @@
-# Fallback manual deploy. Primary CI/CD is Cloudflare Workers Builds (Git
-# integration in the dashboard), which builds and deploys on push to main.
+# Optional manual deploy. Production deploys use local Wrangler;
+# GitHub stores the source and Workers Builds is not connected.
 name: Deploy to Cloudflare (manual)
 on:
   workflow_dispatch:

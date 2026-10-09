@@ -2,14 +2,14 @@
 ## Lisensi
 Kode proyek ini menggunakan [MIT License](LICENSE), dengan atribusi kepada kontributor fi-drive, termasuk kontributor proyek kelompok asal. Dependency pihak ketiga tetap menggunakan lisensinya masing-masing; lisensi MIT proyek ini tidak menggantikan lisensi atau pemberitahuan hak cipta dependency.
 
-Drive pribadi dengan beberapa akun owner yang mengakses drive yang sama. Seluruh aplikasi berjalan di Cloudflare: satu Worker melayani frontend React (Workers Static Assets) dan API `/api/*`, metadata disimpan di D1, isi berkas di bucket R2 privat, dan login dijaga Cloudflare Access dengan IdP Microsoft Entra ID.
+Drive pribadi dengan beberapa akun owner yang mengakses drive yang sama. Seluruh aplikasi berjalan di Cloudflare: satu Worker melayani frontend React (Workers Static Assets) dan API `/api/*`, metadata disimpan di D1, isi berkas di bucket R2 privat, dan login dijaga Cloudflare Access dengan OTP email.
 
 ## Fitur
-- Login Microsoft Entra ID melalui Cloudflare Access.
+- Login OTP email melalui Cloudflare Access.
 - Hanya akun dengan email dalam `OWNER_EMAILS` yang dapat memakai API privat. Akun lain ditolak (403).
-- Kuota total drive 100 MiB (104.857.600 byte), tanpa pembagian kuota per pengguna. Semua tipe berkas diterima, termasuk Markdown, dengan batas 10 MiB per berkas.
+- Kuota total drive 8 GiB (8.589.934.592 byte), tanpa pembagian kuota per pengguna. Semua tipe berkas diterima, termasuk Markdown, dengan batas 10 MiB per berkas.
 - Upload, download, hapus berkas, dan public link, tanpa Manage Members atau berbagi antaranggota.
-- Public link dibatasi 50 unduhan per berkas, ditegakkan dengan `UPDATE` atomik di D1. Link lama (10 unduhan) disesuaikan saat dipakai, dengan unduhan yang sudah terpakai tetap dihitung.
+- Public link dibatasi 100 unduhan per berkas, ditegakkan dengan `UPDATE` atomik di D1. Link lama (10 atau 50 unduhan) disesuaikan saat dipakai, dengan unduhan yang sudah terpakai tetap dihitung.
 
 Objek R2 tetap privat; unduhan publik melewati Worker tanpa login. `OWNER_EMAILS` berisi daftar email owner dipisahkan koma. `OWNER_EMAIL` adalah identitas partisi penyimpanan (kolom `owner_email` dan baris `users`); jangan mengubahnya untuk menambah atau menghapus akses akun. Jika `OWNER_EMAILS` belum diatur, akses memakai `OWNER_EMAIL`.
 
@@ -38,7 +38,7 @@ Buka `http://127.0.0.1:8787`. `DEV_AUTH_USER` di `.dev.vars` menggantikan login 
 ```powershell
 npm test                                  # verifikasi JWT Access, logika owner, halaman public link
 node scripts/test-migrate-sql.mjs         # konversi Cosmos -> SQL
-npm run test:e2e                          # butuh `npm run dev` berjalan: upload, list, download, public link 50x, delete
+npm run test:e2e                          # butuh `npm run dev` berjalan: upload, list, download, public link 100x, delete
 cd web; npm run lint; npm run build
 ```
 Untuk link uji pada deployment yang berjalan: `node scripts/test-public-link.mjs <URL-download>` (menghabiskan jatah unduh link uji).
@@ -52,13 +52,13 @@ Resource sudah dibuat sekali: D1 `fi-drive-db` (id ada di `wrangler.jsonc`) dan 
 npm run db:migrate:remote
 npm run deploy        # menjalankan build web (build.command) lalu deploy
 ```
-CI/CD utama: Workers Builds. Di dashboard Worker `fi-drive`, Settings > Builds, hubungkan repo GitHub, branch `main`, root directory `/`, build command `npm ci`, deploy command `npx wrangler deploy` (build web dijalankan oleh `build.command` di `wrangler.jsonc`). Workflow `.github/workflows/deploy.yml` adalah cadangan manual (`workflow_dispatch`) dan membutuhkan secret `CLOUDFLARE_API_TOKEN` dan `CLOUDFLARE_ACCOUNT_ID`. Migrasi D1 baru dijalankan manual dengan `npm run db:migrate:remote` sebelum deploy yang membutuhkannya.
+Deploy utama dijalankan lokal lewat Wrangler (`npm run deploy`). GitHub hanya untuk menyimpan repo; Workers Builds tidak digunakan. Workflow `.github/workflows/deploy.yml` adalah alternatif manual (`workflow_dispatch`) dan membutuhkan secret `CLOUDFLARE_API_TOKEN` dan `CLOUDFLARE_ACCOUNT_ID`. Migrasi D1 baru dijalankan manual dengan `npm run db:migrate:remote` sebelum deploy yang membutuhkannya.
 
-## Cutover manual
-Langkah berikut sengaja tidak diotomatisasi:
+## Migrasi dari Azure
+Domain `drive.alfi.ai.id` sudah dipindahkan ke Worker. Panduan berikut disimpan sebagai referensi migrasi:
 1. Atur variabel Worker `OWNER_EMAIL` (pertahankan email partisi lama), `OWNER_EMAILS`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` di dashboard.
-2. Zero Trust > Settings > Authentication: tambahkan Microsoft Entra ID sebagai login method.
-3. Zero Trust > Access > Applications: buat aplikasi self-hosted untuk `drive.alfi.ai.id` dengan policy Allow untuk email owner dan IdP Entra ID. Salin AUD tag ke `ACCESS_AUD`.
+2. Zero Trust > Settings > Authentication: gunakan One-time PIN sebagai login method.
+3. Zero Trust > Access > Applications: buat aplikasi self-hosted untuk `drive.alfi.ai.id` dengan policy Allow untuk email owner dan One-time PIN. Salin AUD tag ke `ACCESS_AUD`.
 4. Buat aplikasi/policy Bypass (Everyone) untuk path anonim: `drive.alfi.ai.id/api/public/*`, `drive.alfi.ai.id/s/*`, `drive.alfi.ai.id/assets/*`, `drive.alfi.ai.id/favicon.svg`. Halaman `/s/<token>` adalah SPA, sehingga `index.html` dan `/assets/*` (hasil build Vite) harus bisa dimuat tanpa login. Link lama `/?public=<token>` berada di bawah `/` sehingga memerlukan login setelah cutover kecuali Anda menambah bypass yang sesuai.
 5. Bekukan upload di Azure, jalankan `npm i --no-save @azure/cosmos @azure/storage-blob`, lalu `node scripts/migrate-azure-to-cf.mjs --out tmp/migration` (dry run, mencetak perintah) dan setelah dicek `--apply --i-understand-this-touches-production`. Bandingkan jumlah baris dan `users.used_bytes` dengan Cosmos. Hapus `tmp/migration` sesudahnya.
 6. Pasang custom domain `drive.alfi.ai.id` ke Worker (Settings > Domains & Routes). Zona DNS tetap di Cloudflare; hapus dulu CNAME `drive` lama yang mengarah ke Static Web Apps.

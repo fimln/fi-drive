@@ -28,6 +28,12 @@ const good = { aud: [aud], iss: `https://${team}`, email: 'Owner@Example.com', e
 const opts = { teamDomain: team, aud, fetcher }
 
 assert.ok(await verifyAccessJwt(await sign(good), opts), 'valid token')
+const token = await sign(good)
+const accessEnv = { ACCESS_TEAM_DOMAIN: team, ACCESS_AUD: aud }
+assert.deepEqual(await getPrincipal(new Request('https://drive.alfi.ai.id/api/me', {
+  headers: { Cookie: `other=value; CF_Authorization=${token}` },
+}), accessEnv), { email: 'owner@example.com' }, 'Access cookie fallback')
+
 assert.equal(await verifyAccessJwt(await sign({ ...good, exp: now - 1 }), opts), null, 'expired')
 assert.equal(await verifyAccessJwt(await sign({ ...good, aud: ['other'] }), opts), null, 'wrong aud')
 assert.equal(await verifyAccessJwt(await sign({ ...good, iss: 'https://evil.cloudflareaccess.com' }), opts), null, 'wrong iss')

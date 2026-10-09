@@ -63,7 +63,7 @@ export function toSql({ users = [], files = [], publicLinks = [] }) {
       file_id: l.fileId,
       owner_email: l.ownerEmail,
       remaining_downloads: l.remainingDownloads,
-      // Legacy docs without maxDownloads had 10; the Worker upgrades them to 50 on first use.
+      // Legacy docs without maxDownloads had 10; the Worker upgrades them to 100 on first use.
       max_downloads: l.maxDownloads || 10,
     }))
   }

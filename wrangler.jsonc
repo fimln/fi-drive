@@ -1,6 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fi-drive",
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [{ "pattern": "drive.alfi.ai.id", "custom_domain": true }],
   "main": "worker/src/index.js",
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },

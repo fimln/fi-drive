@@ -6,6 +6,7 @@
 
 /* Drive page shell: wider than the login page since it hosts a 2-column grid */
 .drive-page {
+  width: 100%;
   max-width: 1080px;
   margin: 0 auto;
   padding: 1.5rem 2rem 4rem;
@@ -13,13 +14,33 @@
 
 /* Login page */
 .login-page {
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
   background: linear-gradient(135deg, var(--azure-blue-light) 0%, var(--neutral-bg) 60%);
 }
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site-footer {
+  margin-top: auto;
+  padding: .8rem 1rem;
+  border-top: 1px solid var(--neutral-border);
+  text-align: center;
+  color: var(--neutral-text-secondary);
+  font-size: .72rem;
+}
+
+.site-footer p { margin: 0; }
+.site-footer p + p { margin-top: .15rem; }
+.site-footer a { color: var(--azure-blue-dark); }
+.site-footer .trademark { font-size: .62rem; line-height: 1.5; }
 
 .login-card {
   width: 100%;
@@ -70,10 +91,6 @@
 
 .ms-login-btn:hover {
   background: var(--azure-blue-dark);
-}
-
-.ms-logo {
-  font-size: 1rem;
 }
 
 .login-note {

@@ -73,7 +73,7 @@ function App() {
           <h1>Public file download</h1>
           {token && /^[A-Za-z0-9_-]{22}$/.test(token) ? (
             <>
-              <p>This link allows up to 50 downloads. Click below to download the file.</p>
+              <p>This link allows up to 100 downloads. Click below to download the file.</p>
               <a className="ms-login-btn" href={`/api/public/${token}/download`}>
                 Download file
               </a>

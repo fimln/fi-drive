@@ -84,6 +84,6 @@ export function downloadUrl(fileId) {
 }
 
 // Cloudflare Access protects the whole host, so a full-page navigation to
-// the app root is intercepted by Access and sent to the Entra ID login.
+// the app root is intercepted by Access and sent to the email OTP login.
 export const LOGIN_URL = import.meta.env.BASE_URL
 export const LOGOUT_URL = '/cdn-cgi/access/logout'
