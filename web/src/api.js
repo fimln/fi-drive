@@ -1,7 +1,7 @@
-// Thin client for the fi-drive API. Same-origin fetches only: SWA
-// serves this app and /api/* from the same host, so the session cookie
-// set by /.auth/login/aad is sent automatically with `credentials:
-// 'include'`. No token handling here — that's the platform's job.
+// Thin client for the fi-drive API. Same-origin fetches only: the Worker
+// serves this app and /api/* from the same host, so the Cloudflare
+// Access cookie (CF_Authorization) is sent automatically with
+// `credentials: 'include'`. No token handling here, that's the platform's job.
 
 export class ApiError extends Error {
   constructor(status, code, message) {
@@ -14,8 +14,8 @@ export class ApiError extends Error {
 async function request(path, options = {}) {
   const response = await fetch(path, {
     credentials: 'include',
-    // The 401 responseOverride in staticwebapp.config.json turns an
-    // unauthenticated /api/* call into a 302 to the login page. Browser
+    // When the Access session is missing or expired, Cloudflare Access
+    // answers /api/* with a 302 to its login page. Browser
     // fetch() follows redirects by default, which would swallow that
     // 302 and hand us a 200 containing the login page's HTML instead
     // of a clean 401. redirect: 'manual' stops that: the response
@@ -49,8 +49,8 @@ async function request(path, options = {}) {
   return body
 }
 
-// GET /api/me — also the endpoint that lazily creates the user's Cosmos
-// document on first call. 401 means not signed in.
+// GET /api/me — also the endpoint that lazily creates the user's D1
+// row on first call. 401 means not signed in.
 export function getMe() {
   return request('/api/me')
 }
@@ -83,5 +83,7 @@ export function downloadUrl(fileId) {
   return `/api/files/${fileId}/download`
 }
 
-export const LOGIN_URL = `/.auth/login/aad?post_login_redirect_uri=${import.meta.env.BASE_URL}`
-export const LOGOUT_URL = `/.auth/logout?post_logout_redirect_uri=${import.meta.env.BASE_URL}`
+// Cloudflare Access protects the whole host, so a full-page navigation to
+// the app root is intercepted by Access and sent to the Entra ID login.
+export const LOGIN_URL = import.meta.env.BASE_URL
+export const LOGOUT_URL = '/cdn-cgi/access/logout'

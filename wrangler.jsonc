@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fi-drive",
+  "main": "worker/src/index.js",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  // Builds web/dist before dev/deploy (also used by Workers Builds).
+  "build": { "command": "npm --prefix web ci && npm --prefix web run build" },
+  "assets": {
+    "directory": "./web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fi-drive-db",
+      "database_id": "bec98dff-b8dd-4297-9515-98407291494b",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "fi-drive-files" }],
+  // OWNER_EMAIL, OWNER_EMAILS, ACCESS_TEAM_DOMAIN, ACCESS_AUD are set in the
+  // dashboard (Settings > Variables). keep_vars stops deploys from wiping them.
+  // Missing values deny all access. DEV_AUTH_USER belongs only in .dev.vars.
+  "keep_vars": true
+}

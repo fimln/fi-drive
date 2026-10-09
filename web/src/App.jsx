@@ -4,7 +4,7 @@ import DrivePage from './DrivePage.jsx'
 import { ApiError, LOGIN_URL, getMe } from './api.js'
 import './App.css'
 
-// Auth state is derived from the server, not local storage: SWA owns
+// Auth state is derived from the server, not local storage: Cloudflare Access owns
 // the session cookie, so on every load we ask /api/me whether we're
 // signed in. A 401 means "show the login page", anything else is a
 // real error worth surfacing.
@@ -36,7 +36,7 @@ function PersonalApp() {
   }, [])
 
   // Anonymous visitors never see an in-app login screen: bounce them
-  // straight to the SWA auth route. LoginPage's button stays as a
+  // straight to the Access-protected root (Access shows the login). LoginPage's button stays as a
   // fallback in case this redirect is ever blocked (e.g. JS disabled,
   // browser navigation guard).
   useEffect(() => {

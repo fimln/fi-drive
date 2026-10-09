@@ -1,0 +1,7 @@
+# Copy to .dev.vars (gitignored) for `wrangler dev`.
+# DEV_AUTH_USER only works when the request host is localhost/127.0.0.1.
+DEV_AUTH_USER=owner@example.com
+OWNER_EMAIL=owner@example.com
+OWNER_EMAILS=owner@example.com
+ACCESS_TEAM_DOMAIN=
+ACCESS_AUD=

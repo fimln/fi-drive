@@ -1,8 +1,9 @@
 import { LOGIN_URL } from './api.js'
 
-// Real Entra ID login: this just redirects to the Static Web Apps auth
-// route. SWA verifies the Microsoft account, sets a session cookie,
-// and injects x-ms-client-principal on every subsequent /api/* call.
+// Real Entra ID login: this navigates to the Access-protected app root.
+// Cloudflare Access verifies the Microsoft account (Entra ID IdP), sets
+// the CF_Authorization cookie, and adds Cf-Access-Jwt-Assertion to every
+// subsequent /api/* call, which the Worker verifies.
 // We never see a password or token here.
 function LoginPage() {
   return (

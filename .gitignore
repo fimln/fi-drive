@@ -14,3 +14,7 @@ tmp/
 .agents/
 .vscode/
 *.local
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/

@@ -1,105 +1,76 @@
 # fi-drive
-
 ## Lisensi
-
 Kode proyek ini menggunakan [MIT License](LICENSE), dengan atribusi kepada kontributor fi-drive, termasuk kontributor proyek kelompok asal. Dependency pihak ketiga tetap menggunakan lisensinya masing-masing; lisensi MIT proyek ini tidak menggantikan lisensi atau pemberitahuan hak cipta dependency.
 
-Drive pribadi dengan beberapa akun owner yang mengakses drive yang sama. Frontend React berjalan di Azure Static Web Apps; API terkelola menyimpan metadata di Azure Cosmos DB dan isi berkas di Azure Blob Storage privat.
+Drive pribadi dengan beberapa akun owner yang mengakses drive yang sama. Seluruh aplikasi berjalan di Cloudflare: satu Worker melayani frontend React (Workers Static Assets) dan API `/api/*`, metadata disimpan di D1, isi berkas di bucket R2 privat, dan login dijaga Cloudflare Access dengan IdP Microsoft Entra ID.
 
 ## Fitur
-
-- Login melalui Microsoft Entra ID bawaan Static Web Apps.
-- Hanya akun Microsoft dengan email dalam `OWNER_EMAILS` yang dapat memakai API privat. Akun lain ditolak (403).
+- Login Microsoft Entra ID melalui Cloudflare Access.
+- Hanya akun dengan email dalam `OWNER_EMAILS` yang dapat memakai API privat. Akun lain ditolak (403).
 - Kuota total drive 100 MiB (104.857.600 byte), tanpa pembagian kuota per pengguna. Semua tipe berkas diterima, termasuk Markdown, dengan batas 10 MiB per berkas.
-- Upload, download, hapus berkas, dan public link dengan desain utama yang sama, tanpa Manage Members atau berbagi antaranggota.
-- Public link dibatasi 50 unduhan per berkas, ditegakkan API dengan ETag. Link yang dibuat sebelum batas ini berlaku disesuaikan saat dipakai, dengan unduhan yang sudah terpakai tetap dihitung.
+- Upload, download, hapus berkas, dan public link, tanpa Manage Members atau berbagi antaranggota.
+- Public link dibatasi 50 unduhan per berkas, ditegakkan dengan `UPDATE` atomik di D1. Link lama (10 unduhan) disesuaikan saat dipakai, dengan unduhan yang sudah terpakai tetap dihitung.
 
-Blob tetap privat; unduhan publik melewati API tanpa login. Identitas privat diverifikasi melalui Static Web Apps. Tetapkan `OWNER_EMAILS` sebagai daftar email owner dipisahkan koma. Semua owner bisa melihat, upload, download, menghapus, dan membuat public link pada drive yang sama, dengan kuota total 100 MiB. `OWNER_EMAIL` tetap menjadi identitas partisi penyimpanan; jangan mengubahnya untuk menambah atau menghapus akses akun. Jika `OWNER_EMAILS` belum diatur, akses memakai `OWNER_EMAIL` untuk kompatibilitas.
+Objek R2 tetap privat; unduhan publik melewati Worker tanpa login. `OWNER_EMAILS` berisi daftar email owner dipisahkan koma. `OWNER_EMAIL` adalah identitas partisi penyimpanan (kolom `owner_email` dan baris `users`); jangan mengubahnya untuk menambah atau menghapus akses akun. Jika `OWNER_EMAILS` belum diatur, akses memakai `OWNER_EMAIL`.
+
+## Arsitektur
+| Bagian | Lokasi | Catatan |
+|---|---|---|
+| Worker | `worker/src/index.js` | router `/api/*`, path lain diteruskan ke `env.ASSETS` (SPA fallback, termasuk `/s/<token>`) |
+| Auth | `worker/src/auth.js` | verifikasi JWT `Cf-Access-Jwt-Assertion` (cadangan cookie `CF_Authorization`): RS256 terhadap JWKS `https://<ACCESS_TEAM_DOMAIN>/cdn-cgi/access/certs` (cache 1 jam), cek `aud`, `iss`, `exp` |
+| D1 `fi-drive-db` | `migrations/` | tabel `users`, `files`, `public_links` |
+| R2 `fi-drive-files` | binding `FILES` | key objek = id berkas (UUID) |
+| Konfigurasi | `wrangler.jsonc` | `keep_vars: true`, variabel diatur di dashboard |
+
+Variabel Worker (bukan rahasia, tetapi jangan di-commit nilai produksinya): `OWNER_EMAIL`, `OWNER_EMAILS`, `ACCESS_TEAM_DOMAIN` (host penuh, mis. `tim.cloudflareaccess.com`), `ACCESS_AUD` (AUD tag aplikasi Access). Nilai kosong berarti semua akses ditolak. `/api/public/*` tidak memerlukan login.
 
 ## Menjalankan secara lokal
-
-Prasyarat: Node.js 22.12+, Docker Desktop, Azure Functions Core Tools v4, dan PowerShell. Perintah berikut dijalankan dari root repo kecuali disebutkan lain.
-
+Prasyarat: Node.js 22.12+.
 ```powershell
-Copy-Item api/local.settings.example.json api/local.settings.json
-./scripts/start-emulators.ps1
-cd api
 npm ci
-func start
+Copy-Item .dev.vars.example .dev.vars
+npm run db:migrate:local
+npm run dev
 ```
-
-Di terminal lain:
-
-```powershell
-cd web
-npm ci
-npm run build
-cd ..
-npx @azure/static-web-apps-cli start ./web/dist --api-port 7071 --port 4280
-```
-
-Buka `http://localhost:4280/.auth/login/aad` dan login sebagai `admin@example.com`, sesuai contoh `OWNER_EMAIL` di `api/local.settings.json`. Atur `OWNER_EMAILS` dengan akun Microsoft yang diberi akses; `OWNER_EMAIL` menjadi identitas penyimpanan drive. Berkas pengaturan lokal dan nilai rahasia produksi tidak boleh di-commit. Kunci di file contoh adalah kredensial emulator lokal yang dipublikasikan Azure, bukan kunci Azure produksi.
+Buka `http://127.0.0.1:8787`. `DEV_AUTH_USER` di `.dev.vars` menggantikan login Access, tetapi hanya untuk host `localhost`/`127.0.0.1` (`wrangler dev`); di domain lain variabel itu diabaikan. Jangan pernah mengaturnya di dashboard. D1 dan R2 lokal tersimpan di `.wrangler/` (gitignored).
 
 ## Pemeriksaan
-
 ```powershell
-node api/test-personal.js
-node web/test-public-link.mjs
-cd web
-npm run lint
-npm run build
+npm test                                  # verifikasi JWT Access, logika owner, halaman public link
+node scripts/test-migrate-sql.mjs         # konversi Cosmos -> SQL
+npm run test:e2e                          # butuh `npm run dev` berjalan: upload, list, download, public link 50x, delete
+cd web; npm run lint; npm run build
 ```
+Untuk link uji pada deployment yang berjalan: `node scripts/test-public-link.mjs <URL-download>` (menghabiskan jatah unduh link uji).
 
-`test-personal.js` menguji akses pemilik, kuota, upload/delete, dan batas 50 unduhan termasuk permintaan paralel dengan penyimpanan dalam memori. Untuk link uji baru pada API yang berjalan: `node scripts/test-public-link.mjs <URL-download>`. Tes tersebut menghabiskan jatah unduh link uji.
+## Cloudflare MCP dan Wrangler
+Wrangler dipasang sebagai devDependency terkunci (`npx wrangler --version`). Login: `npx wrangler login`, cek dengan `npx wrangler whoami`. Untuk asisten AI, tambahkan server MCP resmi Cloudflare di konfigurasi klien MCP Anda (bukan di repo), misalnya `https://bindings.mcp.cloudflare.com/mcp` (D1, R2, Workers) dan `https://docs.mcp.cloudflare.com/mcp` (dokumentasi).
 
 ## Deploy
-
-Siapkan resource berikut di subscription Azure Anda (nama di bawah hanyalah placeholder):
-
-| Resource | Contoh nama | Catatan |
-|---|---|---|
-| Resource group | `<your-resource-group>` | wadah semua resource |
-| Static Web App | `<your-swa-name>` | paket Free cukup, managed API Node.js 22 |
-| Cosmos DB for NoSQL | `<your-cosmos-account>` | database default `fidrive` |
-| Storage account | `<your-storage-account>` | container Blob privat, default `files` |
-
-Atur application settings Static Web App berikut (isi nilainya di Azure, bukan di repo):
-
-| Nama | Isi |
-|---|---|
-| `COSMOS_CONNECTION` | Connection string Cosmos DB |
-| `COSMOS_DATABASE` | Nama database, default `fidrive` |
-| `STORAGE_CONNECTION` | Connection string Storage account |
-| `FILES_CONTAINER` | Nama container Blob, default `files` |
-| `OWNER_EMAIL` | Identitas penyimpanan drive, pertahankan email owner lama agar berkas dan kuota tetap tersedia |
-| `OWNER_EMAILS` | Email akun Microsoft yang diberi akses, dipisahkan koma |
-
-Contoh dengan Azure CLI:
-
+Resource sudah dibuat sekali: D1 `fi-drive-db` (id ada di `wrangler.jsonc`) dan bucket R2 `fi-drive-files`. Untuk akun baru: `npx wrangler d1 create fi-drive-db` (salin id ke `wrangler.jsonc`) dan `npx wrangler r2 bucket create fi-drive-files`.
 ```powershell
-az staticwebapp appsettings set --name <your-swa-name> --resource-group <your-resource-group> --setting-names COSMOS_CONNECTION="<cosmos-connection-string>" COSMOS_DATABASE=fidrive STORAGE_CONNECTION="<storage-connection-string>" FILES_CONTAINER=files OWNER_EMAIL=you@example.com OWNER_EMAILS=you@example.com,second@example.com
+npm run db:migrate:remote
+npm run deploy        # menjalankan build web (build.command) lalu deploy
 ```
+CI/CD utama: Workers Builds. Di dashboard Worker `fi-drive`, Settings > Builds, hubungkan repo GitHub, branch `main`, root directory `/`, build command `npm ci`, deploy command `npx wrangler deploy` (build web dijalankan oleh `build.command` di `wrangler.jsonc`). Workflow `.github/workflows/deploy.yml` adalah cadangan manual (`workflow_dispatch`) dan membutuhkan secret `CLOUDFLARE_API_TOKEN` dan `CLOUDFLARE_ACCOUNT_ID`. Migrasi D1 baru dijalankan manual dengan `npm run db:migrate:remote` sebelum deploy yang membutuhkannya.
 
-Cosmos memakai throughput bersama 400 RU/s untuk container `users`, `files`, dan `publicLinks`. Blob ditagih sesuai pemakaian, sehingga total biaya tidak dijamin nol. Jangan simpan connection string, token, email pengguna, nama resource produksi, atau hasil ekspor data produksi di Git.
+## Cutover manual
+Langkah berikut sengaja tidak diotomatisasi:
+1. Atur variabel Worker `OWNER_EMAIL` (pertahankan email partisi lama), `OWNER_EMAILS`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` di dashboard.
+2. Zero Trust > Settings > Authentication: tambahkan Microsoft Entra ID sebagai login method.
+3. Zero Trust > Access > Applications: buat aplikasi self-hosted untuk `drive.alfi.ai.id` dengan policy Allow untuk email owner dan IdP Entra ID. Salin AUD tag ke `ACCESS_AUD`.
+4. Buat aplikasi/policy Bypass (Everyone) untuk path anonim: `drive.alfi.ai.id/api/public/*`, `drive.alfi.ai.id/s/*`, `drive.alfi.ai.id/assets/*`, `drive.alfi.ai.id/favicon.svg`. Halaman `/s/<token>` adalah SPA, sehingga `index.html` dan `/assets/*` (hasil build Vite) harus bisa dimuat tanpa login. Link lama `/?public=<token>` berada di bawah `/` sehingga memerlukan login setelah cutover kecuali Anda menambah bypass yang sesuai.
+5. Bekukan upload di Azure, jalankan `npm i --no-save @azure/cosmos @azure/storage-blob`, lalu `node scripts/migrate-azure-to-cf.mjs --out tmp/migration` (dry run, mencetak perintah) dan setelah dicek `--apply --i-understand-this-touches-production`. Bandingkan jumlah baris dan `users.used_bytes` dengan Cosmos. Hapus `tmp/migration` sesudahnya.
+6. Pasang custom domain `drive.alfi.ai.id` ke Worker (Settings > Domains & Routes). Zona DNS tetap di Cloudflare; hapus dulu CNAME `drive` lama yang mengarah ke Static Web Apps.
+7. Uji produksi: login, upload, download, public link anonim, logout (`/cdn-cgi/access/logout`).
+8. Hapus resource Azure (Static Web App, Cosmos DB, Storage account, resource group) dan secret GitHub `AZURE_STATIC_WEB_APPS_API_TOKEN`.
 
 ## Domain
+URL produksi drive: `https://drive.alfi.ai.id/`. Public link baru menggunakan `/s/<token>`; format lama `/?public=<token>` tetap didukung frontend. Membuka halaman public link tidak menghabiskan jatah unduhan; unduhan dimulai setelah tombol Download diklik.
 
-URL produksi drive: `https://drive.alfi.ai.id/`. Frontend memakai base `/`; login/logout dan public link memakai hostname yang sama. Public link baru menggunakan `/s/<token>`; format lama `/?public=<token>` tetap didukung. Membuka halaman public link tidak menghabiskan jatah unduhan, unduhan dimulai setelah tombol Download diklik.
-
-Record Cloudflare CNAME `drive` mengarah langsung ke hostname Azure Static Web Apps dengan proxy dinonaktifkan (DNS only). Daftarkan subdomain melalui `az staticwebapp hostname set --validation-method cname-delegation`; Azure memvalidasi DNS dan menyediakan sertifikat HTTPS.
-
-Cloudflare Worker [`scripts/drive-proxy.mjs`](scripts/drive-proxy.mjs) mengalihkan URL lama `/drive`, `/drive/*`, `/api/*`, dan `/.auth/*` pada domain utama ke subdomain baru dengan status 308, mempertahankan path dan query public link. Halaman utama tetap memakai origin website sebelumnya. Worker tidak lagi membutuhkan binding `AZURE_ORIGIN` atau route validasi sertifikat.
-
-Verifikasi redirect lokal: `node scripts/test-drive-proxy.mjs`. Sesudah deploy, cek halaman, aset, API anonim, serta hostname callback dan domain cookie login. Login penuh tetap perlu dilakukan memakai akun pemilik.
-
-## CI/CD
-
-Workflow `.github/workflows/azure-static-web-apps.yml` memakai `Azure/static-web-apps-deploy@v1`. Setiap push ke `main` membangun `web` (hasil `dist`) dan API `api`, lalu men-deploy ke Static Web App produksi. Pull request ke `main` dibangun dan di-deploy ke environment pratinjau, yang ditutup saat pull request ditutup. Workflow juga bisa dijalankan manual lewat `workflow_dispatch`.
-
-Satu secret GitHub wajib ada di repo: `AZURE_STATIC_WEB_APPS_API_TOKEN`, berisi deployment token Static Web App. Ambil token dengan `az staticwebapp secrets list --name <your-swa-name> --resource-group <your-resource-group> --query "properties.apiKey" -o tsv`, lalu simpan lewat `gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN`. Connection string tetap disimpan sebagai application settings Static Web App, bukan di repo atau workflow.
+Cloudflare Worker [`scripts/drive-proxy.mjs`](scripts/drive-proxy.mjs) mengalihkan URL lama `/drive`, `/drive/*`, `/api/*`, dan `/.auth/*` pada domain utama ke subdomain baru dengan status 308. Verifikasi lokal: `node scripts/test-drive-proxy.mjs`.
 
 ## Batasan
-
 - Tidak ada pratinjau atau thumbnail otomatis dan pemindaian malware.
-- Data tidak dimigrasikan otomatis. Untuk memakai database Cosmos yang sudah ada, atur `COSMOS_DATABASE` ke nama database tersebut dan pertahankan `OWNER_EMAIL` sesuai partisi berkas yang sudah ada. Akun dalam `OWNER_EMAILS` semuanya mengakses partisi dan kuota tersebut.
-- Paket Static Web Apps Free tidak memiliki SLA. Biaya Cosmos DB dan Blob Storage bergantung pada pemakaian.
+- Workers Free membatasi body request 100 MB; aplikasi memakai batas 10 MiB per berkas.
+- Bila Access belum dikonfigurasi atau `ACCESS_AUD` salah, API privat membalas 401 dan frontend terus mengarahkan ke `/`.

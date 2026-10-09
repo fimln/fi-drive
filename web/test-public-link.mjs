@@ -18,9 +18,12 @@ try {
     const html = renderToStaticMarkup(createElement(App))
     assert.ok(html.includes(valid ? `href="/api/public/${token}/download"` : 'Invalid public link.'), pathname + search)
   }
-  const config = JSON.parse(await readFile(new URL('public/staticwebapp.config.json', import.meta.url), 'utf8'))
-  assert.ok(config.routes.some((route) => route.route === '/s/*' && route.rewrite === '/index.html' && route.allowedRoles.includes('anonymous')))
-  console.log('Public links: new and legacy pages, invalid tokens and anonymous Azure rewrite passed.')
+  // /s/* must fall through to index.html via the Workers Static Assets SPA fallback.
+  const jsonc = await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8')
+  const config = JSON.parse(jsonc.replace(/^\s*\/\/.*$/gm, ''))
+  assert.equal(config.assets.not_found_handling, 'single-page-application')
+  assert.deepEqual(config.assets.run_worker_first, ['/api/*'])
+  console.log('Public links: new and legacy pages, invalid tokens and SPA fallback for /s/* passed.')
 } finally {
   await server.close()
   delete globalThis.window
